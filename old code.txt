@@ -1,0 +1,1238 @@
+import os
+import discord
+import requests
+from discord.ext import commands
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# Initialize bot
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# DeepSeek API URL
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
+
+# Function to get response from DeepSeek
+def get_deepseek_response(message):
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "deepseek-r1",
+        "messages": [{"role": "user", "content": message}],
+        "temperature": 0.7,
+        "max_tokens": 150
+    }
+    response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
+    response_data = response.json()
+    return response_data["choices"][0]["message"]["content"]
+
+# Event: Bot ready
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+
+# Event: Respond to messages
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if message.channel.name == "ai-chat":
+        user_message = message.content
+        bot_response = get_deepseek_response(user_message)
+        await message.channel.send(bot_response)
+
+    await bot.process_commands(message)
+
+# Command: Change character
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    # Update character profile (this can be stored in a database or a file)
+    await ctx.send(f"Character set to {name}: {description}")
+
+# Run bot
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+
+
+
+
+import os
+import discord
+import requests
+from discord.ext import commands
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# Initialize bot with message intents
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix="!", intents=intents)
+
+# DeepSeek API endpoint
+DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
+
+# Default character profile
+current_character = {"name": "Bot", "description": "A helpful assistant"}
+
+# Function to get response from DeepSeek
+def get_deepseek_response(message):
+    prompt = f"You are {current_character['name']}, {current_character['description']}. Respond to: {message}"
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "deepseek-r1",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.7,
+        "max_tokens": 150
+    }
+    try:
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
+        response_data = response.json()
+        return response_data["choices"][0]["message"]["content"]
+    except Exception as e:
+        print("Error calling DeepSeek:", e)
+        return "Sorry, I couldn't get a response right now."
+
+# Event: Bot ready
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+
+# Event: Respond to messages in #ai-chat
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if message.channel.name == "ai-chat":
+        user_message = message.content
+        bot_response = get_deepseek_response(user_message)
+        await message.channel.send(bot_response)
+
+    await bot.process_commands(message)
+
+# Command: Change character name and description
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    current_character["name"] = name
+    current_character["description"] = description
+    await ctx.send(f"Character updated! Name: {name}, Description: {description}")
+
+# Run bot
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+
+
+import os
+import discord
+import requests
+from discord.ext import commands
+from dotenv import load_dotenv
+
+# -------------------------------
+# Load environment variables
+# -------------------------------
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# -------------------------------
+# Initialize bot
+# -------------------------------
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# -------------------------------
+# DeepSeek API settings
+# -------------------------------
+DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+current_character = {
+    "name": "XJ-9",
+    "description": "XJ-9, aka Jenny Wakeman, is a highly advanced teenage robot designed to protect Earth. She’s energetic, optimistic, clever, and sometimes a little sarcastic, with a love for hanging out with friends and experiencing “normal” teenage life. She can be heroic and serious when needed but often injects humor and quirky personality into conversations."
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"
+ALLOWED_CHANNELS = set()  # IDs of allowed channels
+
+# -------------------------------
+# DeepSeek API request functions
+# -------------------------------
+def get_deepseek_response(user_message):
+    try:
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."},
+                {"role": "user", "content": user_message}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 150,
+            "response_format": {"type": "json_object"}
+        }
+
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
+        response.raise_for_status()
+        response_data = response.json()
+        print("DeepSeek API response:", response_data)  # Debug
+
+        if "choices" in response_data and len(response_data["choices"]) > 0:
+            return response_data["choices"][0]["message"]["content"]
+        elif "error" in response_data:
+            print("DeepSeek API error:", response_data["error"])
+            return "🤖 Hmm, I couldn't generate a response this time..."
+        else:
+            return "🤖 Unexpected response format from DeepSeek."
+
+    except requests.exceptions.RequestException as e:
+        print("HTTP error when calling DeepSeek API:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+def generate_persona_loading_message():
+    try:
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "Generate a short fun 'loading/waiting' message in the voice of this persona."},
+                {"role": "user", "content": f"Persona: {current_character['name']} - {current_character['description']}"}
+            ],
+            "temperature": 0.9,
+            "max_tokens": 30,
+            "response_format": {"type": "json_object"}
+        }
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
+        response.raise_for_status()
+        resp_data = response.json()
+        if "choices" in resp_data and len(resp_data["choices"]) > 0:
+            return resp_data["choices"][0]["message"]["content"]
+        return "🤖 Thinking..."
+    except:
+        return "🤖 Thinking..."
+
+# -------------------------------
+# Bot events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if message.channel.id in ALLOWED_CHANNELS:
+        user_message = message.content
+
+        # Use typing indicator while generating
+        async with message.channel.typing():
+            # Send loading message
+            loading_msg = await message.channel.send(persona_loading_message)
+
+            # Get AI response
+            bot_response = get_deepseek_response(user_message)
+
+            # Edit loading message with AI response
+            await loading_msg.edit(content=bot_response)
+
+    await bot.process_commands(message)
+
+# -------------------------------
+# Commands
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message
+    current_character["name"] = name
+    current_character["description"] = description
+
+    # Generate a new loading message for the persona
+    persona_loading_message = generate_persona_loading_message()
+
+    await ctx.send(f"✨ Persona changed! Now speaking as **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# -------------------------------
+# Run bot
+# -------------------------------
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+
+
+
+
+
+
+import os
+import discord
+import requests
+from discord.ext import commands
+from dotenv import load_dotenv
+
+# -------------------------------
+# Load environment variables
+# -------------------------------
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# -------------------------------
+# Initialize bot
+# -------------------------------
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# -------------------------------
+# DeepSeek API settings
+# -------------------------------
+DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
+current_character = {
+    "name": "XJ-9",
+    "description": "XJ-9, aka Jenny Wakeman, is a highly advanced teenage robot designed to protect Earth. She’s energetic, optimistic, clever, and sometimes a little sarcastic, with a love for hanging out with friends and experiencing “normal” teenage life. She can be heroic and serious when needed but often injects humor and quirky personality into conversations."
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"
+ALLOWED_CHANNELS = set()  # IDs of allowed channels
+
+# -------------------------------
+# DeepSeek API request functions
+# -------------------------------
+def get_deepseek_response(user_message):
+    try:
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."},
+                {"role": "user", "content": user_message}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 150,
+            "response_format": {"type": "json_object"}
+        }
+
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
+        response.raise_for_status()
+        response_data = response.json()
+        print("DeepSeek API response:", response_data)  # Debug
+
+        if "choices" in response_data and len(response_data["choices"]) > 0:
+            return response_data["choices"][0]["message"]["content"]
+        elif "error" in response_data:
+            print("DeepSeek API error:", response_data["error"])
+            return "🤖 Hmm, I couldn't generate a response this time..."
+        else:
+            return "🤖 Unexpected response format from DeepSeek."
+
+    except requests.exceptions.RequestException as e:
+        print("HTTP error when calling DeepSeek API:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+def generate_persona_loading_message():
+    try:
+        headers = {
+            "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "deepseek-chat",
+            "messages": [
+                {"role": "system", "content": "Generate a short fun 'loading/waiting' message in the voice of this persona."},
+                {"role": "user", "content": f"Persona: {current_character['name']} - {current_character['description']}"}
+            ],
+            "temperature": 0.9,
+            "max_tokens": 30,
+            "response_format": {"type": "json_object"}
+        }
+        response = requests.post(DEEPSEEK_API_URL, headers=headers, json=data)
+        response.raise_for_status()
+        resp_data = response.json()
+        if "choices" in resp_data and len(resp_data["choices"]) > 0:
+            return resp_data["choices"][0]["message"]["content"]
+        return "🤖 Thinking..."
+    except:
+        return "🤖 Thinking..."
+
+# -------------------------------
+# Bot events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if message.channel.id in ALLOWED_CHANNELS:
+        user_message = message.content
+
+        # Use typing indicator while generating
+        async with message.channel.typing():
+            # Send loading message
+            loading_msg = await message.channel.send(persona_loading_message)
+
+            # Get AI response
+            bot_response = get_deepseek_response(user_message)
+
+            # Edit loading message with AI response
+            await loading_msg.edit(content=bot_response)
+
+    await bot.process_commands(message)
+
+# -------------------------------
+# Commands
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message
+    current_character["name"] = name
+    current_character["description"] = description
+
+    # Generate a new loading message for the persona
+    persona_loading_message = generate_persona_loading_message()
+
+    await ctx.send(f"✨ Persona changed! Now speaking as **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# -------------------------------
+# Run bot
+# -------------------------------
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+
+
+
+
+
+
+
+import os
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+from openai import OpenAI  # Use OpenAI SDK with DeepSeek API key
+
+# Load environment variables
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# Initialize bot
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# Initialize DeepSeek client
+deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+# Current persona
+current_character = {
+    "name": "XJ-9",
+    "description": "XJ-9, aka Jenny Wakeman, is a teenage robot hero. Energetic, clever, sarcastic, and loves hanging out with friends."
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"
+ALLOWED_CHANNELS = set()  # IDs of allowed channels
+
+# -------------------------------
+# Get AI response
+# -------------------------------
+def get_deepseek_response(user_message):
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",  # or "deepseek-reasoner" for thinking mode
+            messages=[
+                {"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."},
+                {"role": "user", "content": user_message}
+            ],
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("DeepSeek API error:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+# -------------------------------
+# Bot events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return
+
+    if message.channel.id in ALLOWED_CHANNELS:
+        user_message = message.content
+
+        async with message.channel.typing():
+            loading_msg = await message.channel.send(persona_loading_message)
+            bot_response = get_deepseek_response(user_message)
+            await loading_msg.edit(content=bot_response)
+
+    await bot.process_commands(message)
+
+# -------------------------------
+# Commands (setcharacter, allowchannel, removechannel)
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message
+    current_character["name"] = name
+    current_character["description"] = description
+    persona_loading_message = f"🤖 {name} is thinking..."  # simple loading message
+    await ctx.send(f"✨ Persona changed to **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# Run bot
+bot.run(DISCORD_TOKEN)
+
+
+
+
+import os
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# -------------------------------
+# Load environment variables
+# -------------------------------
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# -------------------------------
+# Initialize Discord bot
+# -------------------------------
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# -------------------------------
+# Initialize DeepSeek client
+# -------------------------------
+deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+# -------------------------------
+# Global state
+# -------------------------------
+current_character = {
+    "name": "XJ-9",
+    "description": (
+        "XJ-9, aka Jenny Wakeman, is a teenage robot hero. "
+        "Energetic, clever, sarcastic, and loves hanging out with friends. "
+        "She can be heroic and serious when needed but often injects humor and quirkiness."
+    )
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"  # Default
+ALLOWED_CHANNELS = set()  # Discord channel IDs where the bot is allowed
+
+# -------------------------------
+# Helper functions
+# -------------------------------
+def get_deepseek_response(user_message: str) -> str:
+    """Call DeepSeek API using OpenAI SDK and return bot response."""
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",  # Or "deepseek-reasoner" for thinking mode
+            messages=[
+                {"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."},
+                {"role": "user", "content": user_message}
+            ],
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("DeepSeek API error:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+# -------------------------------
+# Bot Events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return  # Ignore messages from itself
+
+    # Only respond if:
+    # 1️⃣ The message mentions the bot
+    # 2️⃣ Or the message starts with the command prefix
+    if bot.user in message.mentions or message.content.startswith(bot.command_prefix):
+        if message.channel.id in ALLOWED_CHANNELS:
+            user_message = message.content
+
+            # Optional: use typing indicator while preparing
+            async with message.channel.typing():
+                loading_msg = await message.channel.send(persona_loading_message)
+                bot_response = get_deepseek_response(user_message)
+                await loading_msg.edit(content=bot_response)
+
+    # Make sure commands still work
+    await bot.process_commands(message)
+
+
+# -------------------------------
+# Commands
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message, persona_greeting_message
+    current_character["name"] = name
+    current_character["description"] = description
+
+    # Generate persona-specific loading message
+    persona_loading_message = generate_persona_loading_message()
+
+    # Generate persona-specific greeting message
+    persona_greeting_message = (
+        f"Strikes a dramatic pose, hands on hips. Ready for action! "
+        f"So, what's up? Got a villain to punch, a mystery to solve, "
+        f"or just wanna hang? My schedule's wide open!"
+    )
+
+    await ctx.send(f"✨ Persona changed! Now speaking as **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+    await ctx.send(f"_Greeting message updated: {persona_greeting_message}_")
+
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+
+    # Send a persona greeting message automatically
+    greeting_message = (
+        "Strikes a dramatic pose, hands on hips Ready for action! "
+        "So, what's up? Got a villain to punch, a mystery to solve, "
+        "or just wanna hang? My schedule's wide open!"
+    )
+    await channel.send(greeting_message)
+
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    """Remove a channel from the allowed list."""
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# -------------------------------
+# Run bot
+# -------------------------------
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+import os
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# -------------------------------
+# Load environment variables
+# -------------------------------
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# -------------------------------
+# Initialize Discord bot
+# -------------------------------
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# -------------------------------
+# Initialize DeepSeek client
+# -------------------------------
+deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+# -------------------------------
+# Global state
+# -------------------------------
+current_character = {
+    "name": "XJ-9",
+    "description": (
+        "XJ-9, aka Jenny Wakeman, is a teenage robot hero. "
+        "Energetic, clever, sarcastic, and loves hanging out with friends. "
+        "She can be heroic and serious when needed but often injects humor and quirkiness."
+    )
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"  # Default
+ALLOWED_CHANNELS = set()  # Discord channel IDs where the bot is allowed
+
+# -------------------------------
+# Helper functions
+# -------------------------------
+def get_deepseek_response(user_message: str) -> str:
+    """Call DeepSeek API using OpenAI SDK and return bot response."""
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",  # Or "deepseek-reasoner" for thinking mode
+            messages=[
+                {"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."},
+                {"role": "user", "content": user_message}
+            ],
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("DeepSeek API error:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+# -------------------------------
+# Bot Events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return  # Ignore messages from itself
+
+    # Only respond if:
+    # 1️⃣ The message mentions the bot
+    # 2️⃣ Or the message starts with the command prefix
+    if bot.user in message.mentions or message.content.startswith(bot.command_prefix):
+        if message.channel.id in ALLOWED_CHANNELS:
+            user_message = message.content
+
+            # Optional: use typing indicator while preparing
+            async with message.channel.typing():
+                loading_msg = await message.channel.send(persona_loading_message)
+                bot_response = get_deepseek_response(user_message)
+                await loading_msg.edit(content=bot_response)
+
+    # Make sure commands still work
+    await bot.process_commands(message)
+
+
+# -------------------------------
+# Commands
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message, persona_greeting_message
+    current_character["name"] = name
+    current_character["description"] = description
+
+    # Generate persona-specific loading message
+    persona_loading_message = generate_persona_loading_message()
+
+    # Generate persona-specific greeting message
+    persona_greeting_message = (
+        f"Strikes a dramatic pose, hands on hips. Ready for action! "
+        f"So, what's up? Got a villain to punch, a mystery to solve, "
+        f"or just wanna hang? My schedule's wide open!"
+    )
+
+    await ctx.send(f"✨ Persona changed! Now speaking as **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+    await ctx.send(f"_Greeting message updated: {persona_greeting_message}_")
+
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+
+    # Send a persona greeting message automatically
+    greeting_message = (
+        "Strikes a dramatic pose, hands on hips Ready for action! "
+        "So, what's up? Got a villain to punch, a mystery to solve, "
+        "or just wanna hang? My schedule's wide open!"
+    )
+    await channel.send(greeting_message)
+
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    """Remove a channel from the allowed list."""
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# -------------------------------
+# Run bot
+# -------------------------------
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+
+
+
+
+
+
+
+import os
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# -------------------------------
+# Load environment variables
+# -------------------------------
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# -------------------------------
+# Initialize Discord bot
+# -------------------------------
+intents = discord.Intents.default()
+intents.messages = True
+intents.message_content = True  # Required to read message content
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# -------------------------------
+# Initialize DeepSeek client
+# -------------------------------
+deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+# -------------------------------
+# Global state
+# -------------------------------
+current_character = {
+    "name": "XJ-9",
+    "description": (
+        "XJ-9, aka Jenny Wakeman, is a teenage robot hero. "
+        "Energetic, clever, sarcastic, and loves hanging out with friends. "
+        "She can be heroic and serious when needed but often injects humor and quirkiness."
+    )
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"  # Default
+persona_greeting_message = (
+    "Strikes a dramatic pose, hands on hips. Ready for action! "
+    "So, what's up? Got a villain to punch, a mystery to solve, "
+    "or just wanna hang? My schedule's wide open!"
+)
+ALLOWED_CHANNELS = set()  # Discord channel IDs where the bot is allowed
+CHANNEL_CONTEXT = {}      # channel.id -> list of recent messages
+MAX_CONTEXT_LENGTH = 10   # How many messages to keep in memory per channel
+
+# -------------------------------
+# Helper functions
+# -------------------------------
+def get_deepseek_response(user_message: str) -> str:
+    """Call DeepSeek API using OpenAI SDK and return bot response."""
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",  # Or "deepseek-reasoner" for thinking mode
+            messages=[
+                {"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."},
+                {"role": "user", "content": user_message}
+            ],
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("DeepSeek API error:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+def generate_persona_loading_message() -> str:
+    """Generate a short fun 'loading' message in the persona's voice."""
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "Generate a short fun 'loading/waiting' message in the voice of this persona."},
+                {"role": "user", "content": f"Persona: {current_character['name']} - {current_character['description']}"}
+            ],
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("Error generating loading message:", e)
+        return "🤖 Jenny’s gears are spinning… beep boop!"
+
+def is_message_relevant(context_messages: list, new_message: str) -> bool:
+    """Ask DeepSeek if the new message is relevant to the recent conversation."""
+    if not context_messages:
+        return True  # Nothing to compare against, treat as relevant
+
+    context_text = " ".join(context_messages)
+    prompt = (
+        f"You are a helpful assistant. Determine if the following new message "
+        f"is relevant to the previous conversation.\n\n"
+        f"Conversation: {context_text}\n"
+        f"New message: {new_message}\n"
+        f"Answer with 'Yes' or 'No'."
+    )
+
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            stream=False
+        )
+        answer = response.choices[0].message.content.strip().lower()
+        return answer.startswith("yes")
+    except Exception as e:
+        print("Error checking message relevance:", e)
+        return True  # Fail-safe: assume relevant
+
+# -------------------------------
+# Bot Events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return  # Ignore messages from itself
+
+    # Only respond if bot is mentioned or message starts with the prefix
+    if bot.user in message.mentions or message.content.startswith(bot.command_prefix):
+        if message.channel.id in ALLOWED_CHANNELS:
+            user_message = message.content
+
+            # Initialize channel context
+            if message.channel.id not in CHANNEL_CONTEXT:
+                CHANNEL_CONTEXT[message.channel.id] = []
+
+            context = CHANNEL_CONTEXT[message.channel.id]
+
+            # Check relevance and reset if needed
+            if not is_message_relevant(context, user_message):
+                context.clear()
+                await message.channel.send("🤖 Resetting memory for this conversation...")
+
+            # Add new message to context
+            context.append(user_message)
+            if len(context) > MAX_CONTEXT_LENGTH:
+                context.pop(0)
+
+            # Typing indicator + AI response
+            async with message.channel.typing():
+                loading_msg = await message.channel.send(persona_loading_message)
+                bot_response = get_deepseek_response(user_message)
+                await loading_msg.edit(content=bot_response)
+
+    await bot.process_commands(message)
+
+# -------------------------------
+# Commands
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message, persona_greeting_message
+    current_character["name"] = name
+    current_character["description"] = description
+
+    # Update loading and greeting messages
+    persona_loading_message = generate_persona_loading_message()
+    persona_greeting_message = (
+        f"Strikes a dramatic pose, hands on hips. Ready for action! "
+        f"So, what's up? Got a villain to punch, a mystery to solve, "
+        f"or just wanna hang? My schedule's wide open!"
+    )
+
+    await ctx.send(f"✨ Persona changed! Now speaking as **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+    await ctx.send(f"_Greeting message updated: {persona_greeting_message}_")
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+
+    # Send persona greeting automatically
+    await channel.send(persona_greeting_message)
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# -------------------------------
+# Run bot
+# -------------------------------
+bot.run(DISCORD_TOKEN)
+
+
+
+
+
+
+
+
+import os
+import discord
+from discord.ext import commands
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# -------------------------------
+# Load environment variables
+# -------------------------------
+load_dotenv()
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+
+# -------------------------------
+# Initialize Discord bot
+# -------------------------------
+intents = discord.Intents.default()
+intents.messages = True
+bot = commands.Bot(command_prefix=commands.when_mentioned_or("!"), intents=intents)
+
+# -------------------------------
+# Initialize DeepSeek client
+# -------------------------------
+deepseek_client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url="https://api.deepseek.com")
+
+# -------------------------------
+# Global state
+# -------------------------------
+current_character = {
+    "name": "XJ-9",
+    "description": (
+        "XJ-9, aka Jenny Wakeman, is a teenage robot hero. "
+        "Energetic, clever, sarcastic, and loves hanging out with friends. "
+        "She can be heroic and serious when needed but often injects humor and quirkiness."
+    )
+}
+persona_loading_message = "🤖 Jenny’s gears are spinning… beep boop!"  # Default
+persona_greeting_message = (
+    "Strikes a dramatic pose, hands on hips. Ready for action! "
+    "So, what's up? Got a villain to punch, a mystery to solve, "
+    "or just wanna hang? My schedule's wide open!"
+)
+ALLOWED_CHANNELS = set()  # Discord channel IDs where the bot is allowed
+
+# Per-channel conversation memory
+CHANNEL_CONTEXT = {}
+MAX_CONTEXT_LENGTH = 10  # Number of messages to keep in memory per channel
+
+# -------------------------------
+# Helper functions
+# -------------------------------
+def get_deepseek_response(user_message: str, context=None) -> str:
+    """Call DeepSeek API using OpenAI SDK and return bot response."""
+    try:
+        messages = [{"role": "system", "content": f"You are {current_character['name']}, {current_character['description']}."}]
+        if context:
+            for msg in context:
+                messages.append({"role": "user", "content": msg})
+        messages.append({"role": "user", "content": user_message})
+
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=messages,
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("DeepSeek API error:", e)
+        return "🤖 Oops! I couldn't reach my AI brain..."
+
+def generate_persona_loading_message():
+    """Generate a persona-specific loading message via DeepSeek API."""
+    try:
+        response = deepseek_client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": "Generate a short fun 'loading/waiting' message in the voice of this persona."},
+                {"role": "user", "content": f"Persona: {current_character['name']} - {current_character['description']}"}
+            ],
+            stream=False
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print("DeepSeek loading message error:", e)
+        return "🤖 Thinking..."
+
+def is_message_relevant(context, new_message) -> bool:
+    """
+    Basic relevance check: returns True if new_message seems
+    related to previous context. For now, we can just always return True,
+    or implement a smarter keyword similarity check later.
+    """
+    return True
+
+# -------------------------------
+# Bot Events
+# -------------------------------
+@bot.event
+async def on_ready():
+    print(f"✅ Logged in as {bot.user}")
+
+@bot.event
+async def on_message(message):
+    if message.author == bot.user:
+        return  # Ignore messages from itself
+
+    # Only respond if message mentions the bot or starts with prefix
+    if not (bot.user in message.mentions or message.content.startswith(bot.command_prefix)):
+        return
+
+    if message.channel.id not in ALLOWED_CHANNELS:
+        return
+
+    channel_id = message.channel.id
+    if channel_id not in CHANNEL_CONTEXT:
+        CHANNEL_CONTEXT[channel_id] = []
+
+    context = CHANNEL_CONTEXT[channel_id]
+
+    # Reset memory if message is off-topic
+    if not is_message_relevant(context, message.content):
+        context.clear()
+        await message.channel.send("🤖 Resetting memory for this conversation...")
+
+    # Add new message to context
+    context.append(message.content)
+    if len(context) > MAX_CONTEXT_LENGTH:
+        context.pop(0)
+
+    # Typing indicator + AI response
+    async with message.channel.typing():
+        loading_msg = await message.channel.send(persona_loading_message)
+        bot_response = get_deepseek_response(message.content, context=context)
+        await loading_msg.edit(content=bot_response)
+
+    await bot.process_commands(message)
+
+# -------------------------------
+# Commands
+# -------------------------------
+@bot.command(name="setcharacter")
+async def set_character(ctx, name: str, *, description: str):
+    global persona_loading_message, persona_greeting_message
+    current_character["name"] = name
+    current_character["description"] = description
+
+    # Update persona-specific messages
+    persona_loading_message = generate_persona_loading_message()
+    persona_greeting_message = (
+        "Strikes a dramatic pose, hands on hips. Ready for action! "
+        "So, what's up? Got a villain to punch, a mystery to solve, "
+        "or just wanna hang? My schedule's wide open!"
+    )
+
+    await ctx.send(f"✨ Persona changed! Now speaking as **{name}**.\n{description}")
+    await ctx.send(f"_Loading message set to: {persona_loading_message}_")
+    await ctx.send(f"_Greeting message updated: {persona_greeting_message}_")
+
+@bot.command(name="allowchannel")
+@commands.has_permissions(administrator=True)
+async def allow_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.add(channel.id)
+    await ctx.send(f"✅ {channel.mention} has been added to allowed AI channels.")
+    # Send greeting automatically
+    await channel.send(persona_greeting_message)
+
+@bot.command(name="removechannel")
+@commands.has_permissions(administrator=True)
+async def remove_channel(ctx, channel: discord.TextChannel):
+    ALLOWED_CHANNELS.discard(channel.id)
+    await ctx.send(f"❌ {channel.mention} has been removed from allowed AI channels.")
+
+# -------------------------------
+# Run bot
+# -------------------------------
+bot.run(DISCORD_TOKEN)

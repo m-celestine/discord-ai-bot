@@ -1,0 +1,17 @@
+# Ignore virtual environments
+venv/
+env/
+disc_bot_env/
+
+# Ignore Python cache and logs
+__pycache__/
+*.pyc
+*.log
+
+# Ignore system files
+.DS_Store
+
+# Ignore credentials
+.env
+config.json
+apikeys.json
