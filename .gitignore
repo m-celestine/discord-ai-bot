@@ -27,9 +27,7 @@ htmlcov/
 .env
 config.json
 apikeys.json
-requirement_full.txt
-
-
+requirements_full.txt
 
 
 
